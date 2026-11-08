@@ -15,15 +15,67 @@ The design is deliberately two-layered:
 Bootstrap never starts your application services. They are defined and ready,
 and you start them when you need them.
 
+## Two ways to run this
+
+You only need one. They both end in the same place: `bootstrap.sh` running on the
+VM as a normal user.
+
+### Option A: manual, on any VM you can already log into
+
+This is the "SSH in and run something" path. It works on cloud VMs, Proxmox,
+Hyper-V, VirtualBox, or a machine you already own.
+
+```bash
+# on the VM, as your normal user (not root)
+sudo apt-get update && sudo apt-get install -y git
+git clone https://github.com/Coder02Aniket/dev-env.git ~/dev-env
+cd ~/dev-env
+./bootstrap.sh
+```
+
+Nothing else is required. The repo is public, so the clone needs no credentials.
+
+### Option B: automatic at first boot (cloud-init)
+
+Paste `cloud-init/user-data.yaml` into the VM's user-data field at creation. The
+VM clones the repo and runs `bootstrap.sh` itself before you log in. This is just
+Option A automated, plus it creates your `aniket` user and installs your SSH
+public key so you can connect afterwards.
+
+The public key in that file is yours. The private half stays on your laptop at
+`~/.ssh/google_compute_engine`, and you connect with:
+
+```bash
+ssh -i ~/.ssh/google_compute_engine aniket@<VM_IP>
+```
+
 ## Quick start
 
 ### Cloud VM (Ubuntu 24.04)
 
-1. Push this folder to a repository named `dev-env`.
-2. Edit `cloud-init/user-data.yaml`: set your SSH public key and the repo URL.
-3. Paste its contents into the "user data" / "custom data" field when creating
-   the VM (AWS EC2, Azure VM, GCP Compute Engine all accept cloud-init).
-4. Wait for boot, log in, run `make verify`.
+The repo and your SSH public key are already wired into `cloud-init/user-data.yaml`.
+Create the VM with that file as user-data. Example with the gcloud CLI:
+
+```bash
+gcloud compute instances create dev-vm \
+  --zone=asia-south1-a \
+  --machine-type=e2-standard-2 \
+  --image-family=ubuntu-2404-lts-amd64 \
+  --image-project=ubuntu-os-cloud \
+  --metadata-from-file=user-data=cloud-init/user-data.yaml
+```
+
+Then wait a few minutes and connect:
+
+```bash
+IP=$(gcloud compute instances describe dev-vm \
+  --zone=asia-south1-a \
+  --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+ssh -i ~/.ssh/google_compute_engine aniket@"$IP"
+```
+
+AWS EC2 and Azure VMs work the same way: paste the file into the "User data" or
+"Custom data" field at creation, then SSH in as `aniket`.
 
 Progress is logged to `/var/log/cloud-init-output.log`.
 
