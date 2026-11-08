@@ -1,0 +1,31 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$username$hostname$directory$git_branch$git_status$java$python$nodejs$rust$golang
+$line_break$character"""
+
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[>](bold red)"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+
+[git_branch]
+symbol = " "
+
+[java]
+disabled = false
+
+[python]
+disabled = false
+
+[nodejs]
+disabled = false
+
+[rust]
+disabled = false
+
+[golang]
+disabled = false

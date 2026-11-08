@@ -1,0 +1,31 @@
+[user]
+	name = {{ .name | quote }}
+	email = {{ .email | quote }}
+
+[init]
+	defaultBranch = main
+
+[core]
+	editor = vim
+	autocrlf = input
+	pager = less -FRX
+
+[pull]
+	rebase = true
+
+[push]
+	autoSetupRemote = true
+
+[fetch]
+	prune = true
+
+[color]
+	ui = auto
+
+[alias]
+	st = status -sb
+	co = checkout
+	br = branch
+	lg = log --oneline --graph --decorate -20
+	last = log -1 HEAD --stat
+	unstage = reset HEAD --

@@ -1,0 +1,58 @@
+# ~/.zshrc
+
+# --- history ---------------------------------------------------------------
+HISTFILE="${HOME}/.zsh_history"
+HISTSIZE=50000
+SAVEHIST=50000
+setopt SHARE_HISTORY HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS
+
+# --- options ---------------------------------------------------------------
+setopt AUTO_CD AUTO_PUSHD PUSHD_IGNORE_DUPS INTERACTIVE_COMMENTS
+
+# --- path ------------------------------------------------------------------
+export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${HOME}/.opencode/bin:${HOME}/.azd/bin:${PATH}"
+
+# --- completion ------------------------------------------------------------
+autoload -Uz compinit
+compinit -i
+
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+
+# --- tool integrations -----------------------------------------------------
+[[ -f "${HOME}/.cargo/env" ]] && . "${HOME}/.cargo/env"
+
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+fi
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook zsh)"
+fi
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
+
+# --- plugins (optional packages) ------------------------------------------
+[[ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
+  source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
+  source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# --- aliases ---------------------------------------------------------------
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+alias gs='git status'
+alias gd='git diff'
+alias gl='git log --oneline --graph --decorate -20'
+alias dc='docker compose'
+alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+alias mvnci='mvn clean install'
+alias mvnq='mvn -q -DskipTests package'
+
+# --- toolchain helpers -----------------------------------------------------
+jdk21() { export JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64; export PATH="$JAVA_HOME/bin:$PATH"; }
+jdk17() { export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64; export PATH="$JAVA_HOME/bin:$PATH"; }

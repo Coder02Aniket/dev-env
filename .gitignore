@@ -1,0 +1,10 @@
+# bootstrap output
+.results.tsv
+
+# local service config (copy of .env.example)
+infra/.env
+
+# misc
+*.log
+.DS_Store
+Thumbs.db
