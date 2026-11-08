@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Node 22 LTS via mise, plus pnpm.
+# Node 22 LTS and Bun via mise, plus pnpm.
 
 set -euo pipefail
 : "${ROOT_DIR:=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
@@ -26,4 +26,5 @@ if ! mise exec -- pnpm --version >/dev/null 2>&1; then
 fi
 
 mise exec -- node --version
+log_ok "bun $(mise exec -- bun --version)"
 log_ok "node ready"

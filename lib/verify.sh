@@ -38,6 +38,7 @@ check zsh    zsh    --version
 check java   java   -version
 check mvn    mvn    -version
 check node   node   --version
+check bun    bun    --version
 check pnpm   pnpm   --version
 check python python3 --version
 check uv     uv     --version
@@ -49,9 +50,11 @@ check docker docker --version
 check compose docker compose version
 
 echo
-echo "Azure and agents"
+echo "Cloud and agents"
 optional az       az       version
 optional azd      azd      version
+optional gcloud   gcloud   version
+optional kubectl  kubectl  version --client
 optional func     func     --version
 optional swa      swa      --version
 optional azurite  azurite  --version

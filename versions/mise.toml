@@ -1,5 +1,6 @@
 [tools]
 node = "22"
+bun = "latest"
 go = "latest"
 # Python is managed by uv (steps/40-python.sh).
 # Java is installed system-wide from the Adoptium apt repo (steps/35-java.sh).

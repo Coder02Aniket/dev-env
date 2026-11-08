@@ -10,6 +10,7 @@ no secrets in user-data.
 | SSH key pair | your laptop; public key in user-data | cloud-init injects the public key |
 | GitHub auth | `~/.config/gh/hosts.yml` | `gh auth login` once per VM |
 | Azure auth | `~/.azure/` | `az login --use-device-code` once per VM |
+| GCP auth | `~/.config/gcloud/` | `gcloud auth login` once per VM |
 | opencode auth | `~/.local/share/opencode/` | `opencode auth login` once per VM |
 | Project secrets | `project/.env` (gitignored) | copied or re-entered by you |
 | Service passwords | `infra/.env` (gitignored) | generated from `.env.example` |

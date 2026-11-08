@@ -59,11 +59,12 @@ cd ~/dev-env
 | Shell | zsh + starship, sensible history and aliases |
 | Java | Temurin JDK 21 (default) and JDK 17, Maven 3.9 |
 | Python | uv, pipx, Python 3.12 |
-| Node | Node 22 LTS via mise, pnpm |
+| Node | Node 22 LTS via mise, Bun, pnpm |
 | Native | gcc, clang, cmake, gdb, valgrind, make |
 | Rust / Go | rustup stable, Go latest stable via mise |
 | Containers | Docker Engine, buildx, compose plugin, non-root `docker` group |
 | Azure | az, azd, Azure Functions Core Tools 4, SWA CLI, Azurite |
+| Google Cloud | gcloud CLI, GKE auth plugin, kubectl |
 | Agents | opencode (installed, not signed in) |
 
 ## Local services (opt-in)
@@ -93,7 +94,7 @@ Deliberately simple, with an upgrade path:
 
 - SSH public key is injected by cloud-init. Private keys never touch the VM image.
 - Sign in once per VM: `gh auth login`, `az login --use-device-code`,
-  `opencode auth login`.
+  `gcloud auth login`, `opencode auth login`.
 - Project secrets live in `.env` files, covered by `.gitignore`, with a committed
   `.env.example`. direnv loads them when you `cd` into a project.
 - Never put secrets in `cloud-init/user-data.yaml`: it is readable from inside
