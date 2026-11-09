@@ -137,8 +137,14 @@ RUN retry 4 sudo -u "${USER_NAME}" -H bash -c \
 
 # Install opencode from npm: the platform binary ships in an npm package, so
 # this does not depend on GitHub's release CDN the way the curl installer does.
+# npm puts the binary in the mise-managed Node prefix; link it somewhere
+# non-interactive shells (docker exec) can find it.
 RUN retry 3 sudo -u "${USER_NAME}" -H bash -c \
-    'cd /tmp && mise exec -- npm install -g opencode-ai && test -x "$HOME/.opencode/bin/opencode"'
+      'cd /tmp && mise exec -- npm install -g opencode-ai' \
+    && OC_BIN="$(sudo -u "${USER_NAME}" -H mise exec -- npm prefix -g | tail -n1)/bin/opencode" \
+    && test -x "${OC_BIN}" \
+    && ln -sf "${OC_BIN}" /usr/local/bin/opencode \
+    && sudo -u "${USER_NAME}" -H opencode --version
 
 # --- dotfiles ---------------------------------------------------------------
 # Applied with a small script instead of chezmoi, so the image build does not
