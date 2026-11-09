@@ -150,6 +150,13 @@ every change under `container/`, `dotfiles/`, or `versions/`.
 - Build locally: `make image` then `make rebuild`
 - Your `dev-home` volume survives rebuilds, including logins.
 
+> **UID 1000 hosts only.** The published image contains a `dev` account with UID
+> 1000. If your host account is not 1000 (for example GCP Rocky, where `rocky`
+> already owns 1000 and your user gets 1001), `bootstrap-host.sh` builds a local
+> image for your UID instead — and you must **not** `pull` on that machine.
+> Pulling would replace the matching image with the 1000 one, and the container
+> would lose write access to `/workspace`. Use `make rebuild` there.
+
 Because `dev-home` persists, toolchains installed into it (mise, Rust, uv, opencode)
 keep their old versions after an image update. To pick up the new image's
 toolchains, run `make reset-home` (this deletes logins) and then `make up`.
