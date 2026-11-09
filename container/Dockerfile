@@ -121,7 +121,9 @@ RUN ARCH="$(dpkg --print-architecture)" \
 # --- per-user toolchains ----------------------------------------------------
 COPY versions/mise.toml /tmp/mise.toml
 
-RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" "/home/${USER_NAME}/.config/mise" \
+RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" \
+      "/home/${USER_NAME}/.config" \
+      "/home/${USER_NAME}/.config/mise" \
     && install -m 0644 -o "${USER_NAME}" -g "${USER_NAME}" /tmp/mise.toml "/home/${USER_NAME}/.config/mise/config.toml" \
     && sudo -u "${USER_NAME}" -H mise install \
     && sudo -u "${USER_NAME}" -H mise exec -- npm install -g \
@@ -142,6 +144,7 @@ COPY dotfiles /opt/dotfiles
 COPY container/apply-dotfiles.sh /usr/local/bin/apply-dotfiles
 
 RUN chmod 0755 /usr/local/bin/apply-dotfiles \
+    && chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}/.config" \
     && sudo -u "${USER_NAME}" -H /usr/local/bin/apply-dotfiles /opt/dotfiles
 
 # --- sshd (optional, enabled at runtime) ------------------------------------
