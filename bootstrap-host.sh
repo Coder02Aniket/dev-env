@@ -32,11 +32,43 @@ if ! have git || ! have curl; then
   fi
 fi
 
+install_docker_dnf() {
+  local major pattern baseurl
+  major="$(. /etc/os-release && echo "${VERSION_ID%%.*}")"
+  [[ -n "${major}" ]] || die "cannot determine major version from /etc/os-release"
+
+  # Rocky reports $releasever as a minor version (9.6), but Docker only
+  # publishes major-version paths (/centos/9). Download the repo file and pin
+  # it, which also avoids dnf4/dnf5 config-manager differences.
+  baseurl="https://download.docker.com/linux/centos/${major}/x86_64/stable"
+  curl -fsSL --max-time 30 "${baseurl}/repodata/repomd.xml" >/dev/null ||
+    die "Docker has no package repository for EL ${major} (${baseurl}). Use an EL9/EL10 VM or Podman."
+
+  log "configuring Docker's RPM repository (centos/${major})"
+  curl -fsSL --max-time 30 https://download.docker.com/linux/centos/docker-ce.repo -o /tmp/docker-ce.repo
+  sudo install -m 0644 /tmp/docker-ce.repo /etc/yum.repos.d/docker-ce.repo
+  pattern='s|\$releasever|'"${major}"'|g'
+  sudo sed -i "$pattern" /etc/yum.repos.d/docker-ce.repo
+  rm -f /tmp/docker-ce.repo
+
+  sudo dnf install -y docker-ce docker-ce-cli containerd.io \
+    docker-buildx-plugin docker-compose-plugin
+}
+
 if ! have docker; then
   log "installing Docker"
-  if ! curl -fsSL https://get.docker.com | sudo sh; then
-    die "Docker install failed. On very new releases, install Docker CE manually or use Podman."
-  fi
+  case "${ID:-}" in
+    # Docker publishes RHEL-compatible packages under /linux/centos, but only
+    # per major version. Fedora has its own path, so it uses get.docker.com.
+    rocky|almalinux|rhel|centos)
+      install_docker_dnf || die "Docker CE install failed for this EL version. Use an EL9/EL10 VM or Podman."
+      ;;
+    *)
+      if ! curl -fsSL https://get.docker.com | sudo sh; then
+        die "Docker install failed. On very new releases, install Docker CE manually or use Podman."
+      fi
+      ;;
+  esac
 fi
 
 if have systemctl; then

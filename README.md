@@ -171,10 +171,27 @@ Details in `secrets/README.md`.
 
 ## Rocky Linux notes
 
-- The host script uses Docker's own installer, which supports Rocky 9 and Alma 9.
+- On EL hosts (`rocky`, `almalinux`, `rhel`, `centos`) the script installs Docker
+  CE from Docker's RPM repository itself instead of using `get.docker.com`.
+  Rocky resolves `$releasever` to a minor version (`9.6`), but Docker only
+  publishes major-version paths (`/centos/9`), so the script pins
+  `$releasever` to the major version before installing.
+- If that still fails, the equivalent manual commands are:
+
+  ```bash
+  sudo dnf install -y dnf-plugins-core
+  sudo curl -fsSL https://download.docker.com/linux/centos/docker-ce.repo \
+    -o /etc/yum.repos.d/docker-ce.repo
+  sudo sed -i "s|\$releasever|$(rpm -E %rhel)|g" /etc/yum.repos.d/docker-ce.repo
+  sudo dnf install -y docker-ce docker-ce-cli containerd.io \
+    docker-buildx-plugin docker-compose-plugin
+  sudo systemctl enable --now docker
+  sudo usermod -aG docker "$USER"
+  ```
+
+  Docker publishes `centos/8`, `centos/9`, and `centos/10`. EL7 is unsupported.
+- Fedora uses its own Docker path, so it still goes through `get.docker.com`.
 - SELinux is handled: the repo and workspace mounts carry the `:z` label.
-- Rocky 10 support depends on Docker CE for EL10. If that is not available yet,
-  install Docker CE manually or use Podman with a `podman.sock` mount.
 - firewalld only matters if you expose service ports outside the VM.
 
 ## Legacy native path
