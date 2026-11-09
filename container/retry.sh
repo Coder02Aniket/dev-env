@@ -13,8 +13,11 @@ for ((i = 1; i <= attempts; i++)); do
   if "$@"; then
     exit 0
   fi
-  echo "attempt ${i}/${attempts} failed: $*" >&2
-  sleep 5
+  # Back off progressively: 5s, 10s, 15s, ... A brief 5xx from GitHub's
+  # release CDN usually clears within a minute.
+  delay=$(( i * 5 ))
+  echo "attempt ${i}/${attempts} failed: $* (retrying in ${delay}s)" >&2
+  sleep "$delay"
 done
 
 echo "giving up after ${attempts} attempts: $*" >&2

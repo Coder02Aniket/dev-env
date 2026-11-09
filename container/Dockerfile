@@ -125,13 +125,14 @@ RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" \
       "/home/${USER_NAME}/.config" \
       "/home/${USER_NAME}/.config/mise" \
     && install -m 0644 -o "${USER_NAME}" -g "${USER_NAME}" /tmp/mise.toml "/home/${USER_NAME}/.config/mise/config.toml" \
-    && sudo -u "${USER_NAME}" -H mise install \
-    && sudo -u "${USER_NAME}" -H mise exec -- npm install -g \
+    && retry 6 sudo -u "${USER_NAME}" -H mise install \
+    && retry 3 sudo -u "${USER_NAME}" -H mise exec -- npm install -g \
          pnpm azure-functions-core-tools@4 @azure/static-web-apps-cli azurite
 
-RUN sudo -u "${USER_NAME}" -H uv python install 3.12
+# uv downloads its Python builds from GitHub releases too.
+RUN retry 6 sudo -u "${USER_NAME}" -H uv python install 3.12
 
-RUN sudo -u "${USER_NAME}" -H bash -c \
+RUN retry 4 sudo -u "${USER_NAME}" -H bash -c \
     'curl --proto =https --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal'
 
 # Install opencode from npm: the platform binary ships in an npm package, so
