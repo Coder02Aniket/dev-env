@@ -11,6 +11,8 @@ services:
     image: ghcr.io/coder02aniket/dev-env:latest
     container_name: dev
     hostname: dev
+    extra_hosts:
+      - "dev:127.0.1.1"
     network_mode: host
     init: true
     restart: unless-stopped
@@ -27,7 +29,7 @@ services:
       - ${WORKSPACE_DIR:-$HOME/projects}:/workspace:z
       - .:/opt/dev-env:z
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${HOME}/.ssh/authorized_keys:/run/host-authorized-keys:ro,z
+      - ${HOME}/.ssh:/run/host-ssh:ro,z
 
 volumes:
   dev-home:

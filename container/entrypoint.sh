@@ -14,13 +14,13 @@ fi
 if [[ "${SSH_ENABLED:-1}" == "1" ]]; then
   sudo mkdir -p /run/sshd
 
-  # The host mounts its authorized_keys read-only here; copy it with the
-  # ownership sshd expects. The -f check matters: if the host file is missing,
-  # Docker creates a directory at the mount point instead.
-  if [[ -f /run/host-authorized-keys && -s /run/host-authorized-keys ]]; then
+  # The host's ~/.ssh is mounted read-only; copy authorized_keys with the
+  # ownership sshd expects. Mounting the directory (not the file) avoids Docker
+  # creating a directory called authorized_keys when the file does not exist.
+  if [[ -f /run/host-ssh/authorized_keys && -s /run/host-ssh/authorized_keys ]]; then
     sudo install -d -m 700 -o "${USER_NAME}" -g "${USER_NAME}" "${HOME_DIR}/.ssh"
     sudo install -m 600 -o "${USER_NAME}" -g "${USER_NAME}" \
-      /run/host-authorized-keys "${HOME_DIR}/.ssh/authorized_keys"
+      /run/host-ssh/authorized_keys "${HOME_DIR}/.ssh/authorized_keys"
   fi
 
   sudo /usr/sbin/sshd -p "${SSH_PORT:-2222}"

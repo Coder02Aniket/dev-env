@@ -134,8 +134,10 @@ RUN sudo -u "${USER_NAME}" -H uv python install 3.12
 RUN sudo -u "${USER_NAME}" -H bash -c \
     'curl --proto =https --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal'
 
-RUN retry 4 sudo -u "${USER_NAME}" -H bash -c \
-    'curl -fsSL https://opencode.ai/install -o /tmp/opencode.sh && bash /tmp/opencode.sh'
+# Install opencode from npm: the platform binary ships in an npm package, so
+# this does not depend on GitHub's release CDN the way the curl installer does.
+RUN retry 3 sudo -u "${USER_NAME}" -H bash -c \
+    'cd /tmp && mise exec -- npm install -g opencode-ai && test -x "$HOME/.opencode/bin/opencode"'
 
 # --- dotfiles ---------------------------------------------------------------
 # Applied with a small script instead of chezmoi, so the image build does not

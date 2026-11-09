@@ -14,7 +14,7 @@ Nothing secret is committed, baked into the image, or placed in
 | opencode auth | `/home/dev/.local/share/opencode` inside the container | `opencode auth login` once |
 | Project secrets | `project/.env` (gitignored) | you create it |
 | Service passwords | `infra/.env` on the host (gitignored) | copied from `.env.example` |
-| Container sshd access | host `~/.ssh/authorized_keys` (read-only mount) | your existing keys |
+| Container sshd access | host `~/.ssh` (read-only mount) | your existing keys |
 
 The container home is the `dev-home` volume, so all four logins survive image
 rebuilds. The workspace is a bind mount, so code survives container deletion.

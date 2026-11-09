@@ -93,8 +93,9 @@ Direct SSH into the container (enabled by default):
 ssh -p 2222 dev@<vm-ip>
 ```
 
-It uses your host `~/.ssh/authorized_keys`. Disable it with `SSH_ENABLED=0` in the
-environment before `docker compose up`.
+It uses your host `~/.ssh` (mounted read-only) and copies `authorized_keys`
+into the container. Disable it with `SSH_ENABLED=0` in the environment before
+`docker compose up`.
 
 VS Code: install the Dev Containers extension, open this repo, and choose
 "Reopen in Container". JetBrains Gateway can attach to the same container.
