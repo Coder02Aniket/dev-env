@@ -34,6 +34,7 @@ gcloud compute instances create dev-vm \
   --machine-type=e2-standard-2 \
   --image-family=ubuntu-2404-lts-amd64 \
   --image-project=ubuntu-os-cloud \
+  --project=<your gcp project name> \
   --metadata-from-file=user-data=cloud-init/user-data.yaml
 
 # Rocky 9 host, same user-data
@@ -41,6 +42,7 @@ gcloud compute instances create dev-vm \
   --zone=asia-south1-a \
   --machine-type=e2-standard-2 \
   --image-family=rocky-linux-9 \
+  --project=<your gcp project name> \
   --image-project=rocky-linux-cloud \
   --metadata-from-file=user-data=cloud-init/user-data.yaml
 ```
