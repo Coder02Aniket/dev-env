@@ -3,6 +3,7 @@
 
 set -euo pipefail
 : "${ROOT_DIR:=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+REPO_ROOT="$(cd -- "${ROOT_DIR}/.." && pwd)"
 # shellcheck source=../lib/helpers.sh
 . "${ROOT_DIR}/lib/helpers.sh"
 
@@ -20,7 +21,7 @@ if [[ ! -f "${CHEZMOI_CONF}" ]]; then
 EOF
 fi
 
-log_info "applying dotfiles from ${ROOT_DIR}/dotfiles"
-chezmoi --source "${ROOT_DIR}/dotfiles" apply --force
+log_info "applying dotfiles from ${REPO_ROOT}/dotfiles"
+chezmoi --source "${REPO_ROOT}/dotfiles" apply --force
 
 log_ok "dotfiles applied"

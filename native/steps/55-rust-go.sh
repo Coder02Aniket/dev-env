@@ -3,6 +3,7 @@
 
 set -euo pipefail
 : "${ROOT_DIR:=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+REPO_ROOT="$(cd -- "${ROOT_DIR}/.." && pwd)"
 # shellcheck source=../lib/helpers.sh
 . "${ROOT_DIR}/lib/helpers.sh"
 
@@ -20,7 +21,7 @@ ensure_mise
 ensure_dir "${HOME}/.config/mise"
 MISE_CONF="${HOME}/.config/mise/config.toml"
 if [[ ! -f "${MISE_CONF}" ]]; then
-  cp "${ROOT_DIR}/versions/mise.toml" "${MISE_CONF}"
+  cp "${REPO_ROOT}/versions/mise.toml" "${MISE_CONF}"
 fi
 mise install
 

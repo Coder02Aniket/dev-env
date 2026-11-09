@@ -1,43 +1,66 @@
 SHELL := /bin/bash
 
 ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
-COMPOSE := docker compose -f "$(ROOT)/infra/compose.yaml" --env-file "$(ROOT)/infra/.env"
+DEV := docker compose -f "$(ROOT)/docker-compose.dev.yaml"
+INFRA := docker compose -f "$(ROOT)/infra/compose.yaml" --env-file "$(ROOT)/infra/.env"
 
-.PHONY: help bootstrap verify up down ps logs pull clean
+.PHONY: help bootstrap up down shell logs rebuild image verify \
+        services-up services-down services-ps native-bootstrap reset-home
 
 help:
-	@echo "bootstrap  run the full setup"
-	@echo "verify     print tool versions and service health"
-	@echo "up         start services (all, or S=name)"
-	@echo "down       stop services, keep volumes"
-	@echo "ps         service status and ports"
-	@echo "logs       follow logs (S=name optional)"
-	@echo "pull       pre-pull service images"
-	@echo "clean      stop services and remove volumes"
+	@echo "bootstrap        install Docker and start the dev container"
+	@echo "up               start the dev container"
+	@echo "down             stop the dev container"
+	@echo "shell            open zsh in the dev container"
+	@echo "logs             follow dev container logs"
+	@echo "rebuild          rebuild the image and recreate the container"
+	@echo "image            build the image only"
+	@echo "verify           print tool versions inside the container"
+	@echo "services-up      start services (all, or S=name)"
+	@echo "services-down    stop services, keep volumes"
+	@echo "services-ps      service status"
+	@echo "reset-home       delete the dev-home volume (loses logins)"
+	@echo "native-bootstrap run the legacy native installer"
 
 bootstrap:
-	@bash "$(ROOT)/bootstrap.sh"
+	@bash "$(ROOT)/bootstrap-host.sh"
+
+up:
+	@$(DEV) up -d
+
+down:
+	@$(DEV) down
+
+shell:
+	@docker exec -it dev zsh
+
+logs:
+	@$(DEV) logs -f dev
+
+rebuild:
+	@$(DEV) up -d --build --force-recreate
+
+image:
+	@$(DEV) build
 
 verify:
-	@bash "$(ROOT)/lib/verify.sh"
+	@docker exec dev dev-verify
 
 $(ROOT)/infra/.env:
 	@cp "$(ROOT)/infra/.env.example" "$(ROOT)/infra/.env"
 
-up: $(ROOT)/infra/.env
-	@$(COMPOSE) up -d $(S)
+services-up: $(ROOT)/infra/.env
+	@$(INFRA) up -d $(S)
 
-down: $(ROOT)/infra/.env
-	@$(COMPOSE) down
+services-down: $(ROOT)/infra/.env
+	@$(INFRA) down
 
-ps: $(ROOT)/infra/.env
-	@$(COMPOSE) ps
+services-ps: $(ROOT)/infra/.env
+	@$(INFRA) ps
 
-logs: $(ROOT)/infra/.env
-	@$(COMPOSE) logs -f $(S)
+reset-home:
+	@echo "removing dev-env_dev-home (this deletes logins and per-container toolchains)"
+	@docker volume rm dev-env_dev-home 2>/dev/null || true
 
-pull: $(ROOT)/infra/.env
-	@$(COMPOSE) pull
-
-clean: $(ROOT)/infra/.env
-	@$(COMPOSE) down -v
+native-bootstrap:
+	@bash "$(ROOT)/native/bootstrap.sh"

@@ -3,6 +3,7 @@
 
 set -euo pipefail
 : "${ROOT_DIR:=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
+REPO_ROOT="$(cd -- "${ROOT_DIR}/.." && pwd)"
 # shellcheck source=../lib/helpers.sh
 . "${ROOT_DIR}/lib/helpers.sh"
 
@@ -11,7 +12,7 @@ if [[ "${SKIP_SERVICES:-0}" -eq 1 ]]; then
   exit 0
 fi
 
-INFRA_DIR="${ROOT_DIR}/infra"
+INFRA_DIR="${REPO_ROOT}/infra"
 ENV_FILE="${INFRA_DIR}/.env"
 
 if [[ ! -f "${ENV_FILE}" ]]; then

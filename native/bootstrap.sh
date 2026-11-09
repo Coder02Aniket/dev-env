@@ -81,7 +81,7 @@ done
 
 log_step "done"
 log_info "step results: ${RESULTS_FILE}"
-log_info "run 'make verify' to print versions"
+log_info "run 'bash native/lib/verify.sh' to print versions"
 if ! id -nG "${RUN_USER}" | grep -qw docker; then
   log_warn "log out and back in (or run: newgrp docker) before using docker"
 fi

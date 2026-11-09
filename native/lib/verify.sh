@@ -4,6 +4,7 @@
 set -uo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd -- "${ROOT_DIR}/.." && pwd)"
 export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${HOME}/.opencode/bin:${HOME}/.azd/bin:${HOME}/.local/share/mise/shims:${PATH}"
 
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -64,9 +65,9 @@ optional chezmoi  chezmoi  --version
 
 echo
 echo "Services"
-if [[ -f "${ROOT_DIR}/infra/.env" ]]; then
+if [[ -f "${REPO_ROOT}/infra/.env" ]]; then
   if have docker; then
-    running="$(sudo docker compose -f "${ROOT_DIR}/infra/compose.yaml" --env-file "${ROOT_DIR}/infra/.env" ps -q 2>/dev/null | wc -l)"
+    running="$(sudo docker compose -f "${REPO_ROOT}/infra/compose.yaml" --env-file "${REPO_ROOT}/infra/.env" ps -q 2>/dev/null | wc -l)"
     echo "  compose file valid, containers running: ${running}"
   else
     echo "  docker not available"

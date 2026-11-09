@@ -1,208 +1,224 @@
 # Portable Dev Environment
 
-One repository that turns a fresh Ubuntu/Debian VM into a fully configured
-development machine on first boot, and keeps it consistent across every VM you
-create.
+A container-first development environment that turns any fresh Linux VM into the
+same machine, whether the host runs Ubuntu, Debian, Rocky, Alma, RHEL, CentOS, or
+Fedora.
 
-The design is deliberately two-layered:
+The host installs **Docker only**. Every tool, runtime, CLI, and dotfile lives in
+one image built on Ubuntu 24.04, so the guest userspace is identical everywhere.
 
-1. `cloud-init/user-data.yaml` is a thin trigger. It clones this repo and runs
-   `bootstrap.sh` once, at first boot.
-2. `bootstrap.sh` plus the dotfiles do all the real work. They are idempotent,
-   so the same script works on cloud VMs, local hypervisors, and plain SSH
-   sessions, and can be re-run after a failure.
+## Architecture
 
-Bootstrap never starts your application services. They are defined and ready,
-and you start them when you need them.
-
-## Two ways to run this
-
-You only need one. They both end in the same place: `bootstrap.sh` running on the
-VM as a normal user.
-
-### Option A: manual, on any VM you can already log into
-
-This is the "SSH in and run something" path. It works on cloud VMs, Proxmox,
-Hyper-V, VirtualBox, or a machine you already own.
-
-```bash
-# on the VM, as your normal user (not root)
-sudo apt-get update && sudo apt-get install -y git
-git clone https://github.com/Coder02Aniket/dev-env.git ~/dev-env
-cd ~/dev-env
-./bootstrap.sh
 ```
-
-Nothing else is required. The repo is public, so the clone needs no credentials.
-
-### Option B: automatic at first boot (cloud-init)
-
-Paste `cloud-init/user-data.yaml` into the VM's user-data field at creation. The
-VM clones the repo and runs `bootstrap.sh` itself before you log in. This is just
-Option A automated, plus it creates your `aniket` user and installs your SSH
-public key so you can connect afterwards.
-
-The public key in that file is yours. The private half stays on your laptop at
-`~/.ssh/google_compute_engine`, and you connect with:
-
-```bash
-ssh -i ~/.ssh/google_compute_engine aniket@<VM_IP>
+VM host  (any supported distro)
+│
+├── Docker Engine            ← the only distro-specific install
+│
+├── dev container            ← Ubuntu 24.04, all toolchains, your shell
+│   └── docker CLI ──► host socket
+│
+└── service containers       ← postgres, mysql, mongo, minio, redis (opt-in)
 ```
 
 ## Quick start
 
-### Cloud VM (Ubuntu 24.04)
+### 1. Cloud VM with cloud-init
 
-The repo and your SSH public key are already wired into `cloud-init/user-data.yaml`.
-Create the VM with that file as user-data. Example with the gcloud CLI:
+`cloud-init/user-data.yaml` is distro-agnostic. Create the VM with it as
+user-data. GCP example:
 
 ```bash
+# Ubuntu host
 gcloud compute instances create dev-vm \
   --zone=asia-south1-a \
   --machine-type=e2-standard-2 \
   --image-family=ubuntu-2404-lts-amd64 \
   --image-project=ubuntu-os-cloud \
   --metadata-from-file=user-data=cloud-init/user-data.yaml
+
+# Rocky 9 host, same user-data
+gcloud compute instances create dev-vm \
+  --zone=asia-south1-a \
+  --machine-type=e2-standard-2 \
+  --image-family=rocky-linux-9 \
+  --image-project=rocky-linux-cloud \
+  --metadata-from-file=user-data=cloud-init/user-data.yaml
 ```
 
-Then wait a few minutes and connect:
+AWS EC2 ("User data") and Azure ("Custom data") take the same file.
+
+After a few minutes:
 
 ```bash
 IP=$(gcloud compute instances describe dev-vm \
   --zone=asia-south1-a \
   --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
 ssh -i ~/.ssh/google_compute_engine aniket@"$IP"
+docker exec -it dev zsh
 ```
 
-AWS EC2 and Azure VMs work the same way: paste the file into the "User data" or
-"Custom data" field at creation, then SSH in as `aniket`.
-
-Progress is logged to `/var/log/cloud-init-output.log`.
-
-> The repo contains no secrets, so it is safe to make it public. If you keep it
-> private, add a read-only deploy key or a fine-grained token to the clone step,
-> and remember that user-data is readable from inside the VM.
-
-### Local VM (Proxmox, Hyper-V gen2, VirtualBox)
-
-Build a NoCloud seed ISO and attach it as a second CD-ROM, then boot the
-Ubuntu 24.04 cloud image:
+### 2. Manual, on a VM you already have
 
 ```bash
-cloud-localds seed.iso cloud-init/user-data.yaml cloud-init/meta-data.yaml
-```
-
-Hyper-V and VirtualBox need the same seed ISO; Proxmox has a native
-"Cloud-init" drive where you can paste `user-data.yaml` directly.
-
-### Existing VM or plain SSH
-
-```bash
-git clone https://github.com/<you>/dev-env.git ~/dev-env
+git clone https://github.com/Coder02Aniket/dev-env.git ~/dev-env
 cd ~/dev-env
-./bootstrap.sh
+./bootstrap-host.sh
+docker exec -it dev zsh
 ```
 
-## What gets installed
+The host script installs Docker if needed, adds you to the `docker` group, and
+starts the dev container.
+
+### 3. Existing machine with Docker
+
+```bash
+cd ~/dev-env
+docker compose -f docker-compose.dev.yaml up -d
+docker exec -it dev zsh
+```
+
+## Daily use
+
+```bash
+make shell          # docker exec -it dev zsh
+make verify         # tool versions inside the container
+make rebuild        # rebuild image and recreate container
+make logs
+```
+
+Direct SSH into the container (enabled by default):
+
+```bash
+ssh -p 2222 dev@<vm-ip>
+```
+
+It uses your host `~/.ssh/authorized_keys`. Disable it with `SSH_ENABLED=0` in the
+environment before `docker compose up`.
+
+VS Code: install the Dev Containers extension, open this repo, and choose
+"Reopen in Container". JetBrains Gateway can attach to the same container.
+
+## Services (opt-in, never autostart)
+
+`infra/compose.yaml` defines Postgres with pgvector, MySQL, MongoDB, MinIO, and
+Redis. Start only what you need:
+
+```bash
+make services-up S=postgres
+make services-up S="postgres minio"
+make services-ps
+make services-down
+```
+
+From inside the container the repo is mounted at `/opt/dev-env`:
+
+```bash
+make -C /opt/dev-env services-up S=postgres
+```
+
+The dev container uses host networking, so `localhost:5432`, `localhost:3306`,
+and the rest work exactly as your projects expect.
+
+## What is installed in the container
 
 | Area | Contents |
 |---|---|
-| Base | build-essential, git, gh, curl, jq, ripgrep, fd, tmux, htop, tree, httpie, direnv |
-| Shell | zsh + starship, sensible history and aliases |
-| Java | Temurin JDK 21 (default) and JDK 17, Maven 3.9 |
+| Base | git, gh, curl, jq, ripgrep, fd, tmux, htop, tree, httpie, direnv |
+| Shell | zsh, starship, tmux config, git identity |
+| Java | Temurin JDK 21 (default) and 17, Maven 3.9 |
 | Python | uv, pipx, Python 3.12 |
-| Node | Node 22 LTS via mise, Bun, pnpm |
+| Node | Node 22, Bun, pnpm |
 | Native | gcc, clang, cmake, gdb, valgrind, make |
-| Rust / Go | rustup stable, Go latest stable via mise |
-| Containers | Docker Engine, buildx, compose plugin, non-root `docker` group |
-| Azure | az, azd, Azure Functions Core Tools 4, SWA CLI, Azurite |
-| Google Cloud | gcloud CLI, GKE auth plugin, kubectl |
+| Rust / Go | rustup stable, Go latest |
+| Containers | Docker CLI, buildx, compose plugin |
+| Azure | az, azd, Functions Core Tools 4, SWA CLI, Azurite |
+| Google Cloud | gcloud, GKE auth plugin, kubectl |
 | Agents | opencode (installed, not signed in) |
 
-## Local services (opt-in)
+## Image and updates
 
-`infra/compose.yaml` defines Postgres with pgvector, MySQL, MongoDB, MinIO, and
-Redis. Nothing starts automatically.
+The image is `ghcr.io/coder02aniket/dev-env:latest`, built by GitHub Actions on
+every change under `container/`, `dotfiles/`, or `versions/`.
 
-```bash
-make up                  # start everything
-make up S=postgres       # start one service
-make up S="postgres minio"
-make ps                  # health and ports
-make logs S=minio
-make down                # stop, keep volumes
-make pull                # pre-pull images without starting
-```
+> GHCR packages created by Actions default to **private**. If you want VMs to pull
+> it anonymously, open the package settings on GitHub and change visibility to
+> public. Otherwise `bootstrap-host.sh` falls back to a local build.
 
-Ports are standard (5432, 3306, 27017, 9000/9001, 6379) and configurable through
-`infra/.env`. If a project ships its own compose file, either point that project
-at this stack or run `make down` first to avoid port conflicts.
+- Pull a new image: `docker compose -f docker-compose.dev.yaml pull dev && docker compose -f docker-compose.dev.yaml up -d`
+- Build locally: `make image` then `make rebuild`
+- Your `dev-home` volume survives rebuilds, including logins.
 
-Override any value by editing `infra/.env` (created from `.env.example`).
+Because `dev-home` persists, toolchains installed into it (mise, Rust, uv, opencode)
+keep their old versions after an image update. To pick up the new image's
+toolchains, run `make reset-home` (this deletes logins) and then `make up`.
+
+If the published image is unavailable, `bootstrap-host.sh` falls back to a local
+build automatically.
 
 ## Secrets
 
-Deliberately simple, with an upgrade path:
+Nothing secret is in the repo or in user-data.
 
-- SSH public key is injected by cloud-init. Private keys never touch the VM image.
-- Sign in once per VM: `gh auth login`, `az login --use-device-code`,
-  `gcloud auth login`, `opencode auth login`.
-- Project secrets live in `.env` files, covered by `.gitignore`, with a committed
-  `.env.example`. direnv loads them when you `cd` into a project.
-- Never put secrets in `cloud-init/user-data.yaml`: it is readable from inside
-  the VM via the metadata endpoint.
+- SSH public key is injected by cloud-init; the private key stays on your laptop.
+- `gh`, `az`, `gcloud`, and `opencode` logins live in `/home/dev`, persisted by
+  the `dev-home` volume.
+- Project secrets use `.env` + `.env.example` + direnv.
+- Service passwords live in `infra/.env` on the host (gitignored).
 
-An optional age-encrypted bundle is planned: `./bootstrap.sh --with-secrets <keyfile>`.
-See `secrets/README.md`.
+Details in `secrets/README.md`.
 
-## IDE on a headless VM
+## Rocky Linux notes
 
-`bootstrap.sh` does not install a GUI IDE. Use one of:
+- The host script uses Docker's own installer, which supports Rocky 9 and Alma 9.
+- SELinux is handled: the repo and workspace mounts carry the `:z` label.
+- Rocky 10 support depends on Docker CE for EL10. If that is not available yet,
+  install Docker CE manually or use Podman with a `podman.sock` mount.
+- firewalld only matters if you expose service ports outside the VM.
 
-- **VS Code Remote-SSH** (free): install `code` on your laptop, connect to the
-  VM, install extensions remotely.
-- **JetBrains Gateway** (needs IntelliJ IDEA Ultimate): install the backend on
-  the VM, connect from Gateway on your laptop.
+## Legacy native path
 
-## Flags
-
-```
-./bootstrap.sh                      # full setup
-./bootstrap.sh --pull-images        # also pre-pull service images
-./bootstrap.sh --skip-services      # do not touch infra/.env or validate compose
-./bootstrap.sh --only java          # run one step by name fragment
-./bootstrap.sh --with-secrets FILE  # reserved for the age bundle
-```
-
-## Idempotency
-
-Every step checks before it acts. Running the script twice is safe and is part
-of the acceptance test:
+The original apt-only installer is in `native/` and still works on Ubuntu/Debian:
 
 ```bash
-./bootstrap.sh && ./bootstrap.sh
-make verify
+make native-bootstrap
 ```
+
+It is no longer the default and does not support Rocky.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `permission denied` on docker | log out and back in, or `newgrp docker` |
+| container not starting | `docker compose -f docker-compose.dev.yaml logs dev` |
+| image pull fails | `make rebuild` builds locally |
+| SSH to container refused | check `SSH_ENABLED=1` and host `~/.ssh/authorized_keys` |
+| service port already in use | `make services-down` or change `infra/.env` |
+| workspace files owned by root | run `bootstrap-host.sh` as your user, not root |
 
 ## Layout
 
 ```
-bootstrap.sh          entrypoint, runs steps in order
-lib/helpers.sh        logging, apt, guards
-lib/verify.sh         version and health summary
-steps/                one concern per file, numbered
-dotfiles/             chezmoi source directory
-versions/mise.toml    pinned runtime versions copied to ~/.config/mise
-infra/                docker compose stack for local services
-cloud-init/           first-boot trigger
-secrets/              rules and future age bundle
+container/              Dockerfile, entrypoint, in-container verify
+.devcontainer/          VS Code / JetBrains attach config
+docker-compose.dev.yaml dev container definition
+bootstrap-host.sh       host layer: Docker + start container
+cloud-init/             first-boot trigger (distro-agnostic)
+dotfiles/               chezmoi source, baked into the image
+infra/                  service containers
+versions/mise.toml      Node, Bun, Go pins
+native/                 legacy apt-only installer
+secrets/                rules and future age bundle
 ```
 
-## Troubleshooting
+## Validation
 
-- `docker: permission denied` right after install: log out and back in, or run
-  `newgrp docker`. Group membership only applies to new sessions.
-- A step failed midway: fix the cause and re-run `./bootstrap.sh`. Completed
-  steps are skipped.
-- Check what succeeded: `cat .results.tsv`.
-- Java version: `sudo update-alternatives --config java` to switch 17 and 21.
+```bash
+docker exec dev dev-verify
+# or, from inside the container
+dev-verify
+```
+
+Expect `PASS: all core tools present` and `containers running: 0` until you start
+services.

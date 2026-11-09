@@ -1,9 +1,10 @@
 #cloud-config
-# First-boot trigger. Replace the SSH key and repo URL, then paste this into
-# your provider's user-data field when creating the VM.
+# Distro-agnostic first-boot trigger. Works on Ubuntu, Debian, Rocky, Alma,
+# RHEL, CentOS, and Fedora: cloud-init creates the user, and the host bootstrap
+# installs Docker and starts the dev container.
 #
-# Never put private keys, tokens, or passwords in this file: user-data is
-# readable from inside the VM through the metadata service.
+# Never put private keys or tokens in this file: user-data is readable from
+# inside the VM through the metadata service.
 
 hostname: dev-env
 manage_etc_hosts: true
@@ -19,7 +20,6 @@ ssh_pwauth: false
 
 users:
   - name: aniket
-    groups: [sudo]
     sudo: "ALL=(ALL) NOPASSWD:ALL"
     shell: /bin/bash
     lock_passwd: true
@@ -27,8 +27,7 @@ users:
       - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCFe+uCdGRNDq1Kx4BSW+ZwV1Nx80ql8BaLSlJwgTZs9Kl/51LQBSbWJuBsHAfEIHjGkljw5vO73kuDJSFt/4NdxwdiFmgwhRlBdQLrSIhl20P1BsKPSccerlY/+oi9/U5BtdVdIsaBdRAG1SYRlDQL9eNQszITFET6Rg5k3z/uzeUDYjp6eZvwn2k2CU1T1LYrOK2jNoBJ+DnEc2kxhkDKCfQEmWf0LJdnLfpQmH9EyLsRlZb2J/6whJ7AZZtF75MZvH7tT1D/77XMjaISjgcnmChIFqduYGejlvIJhY07Z4RSvoaXrpwJIoQxUg92wuriljti+iFcGNr3U/0pAQD dev-env
 
 runcmd:
-  - [sudo, -u, aniket, -H, git, clone, --depth, 1, https://github.com/Coder02Aniket/dev-env.git, /home/aniket/dev-env]
-  - [sudo, -u, aniket, -H, bash, /home/aniket/dev-env/bootstrap.sh]
+  - [sudo, -u, aniket, -H, bash, -c, "git clone --depth 1 https://github.com/Coder02Aniket/dev-env.git /home/aniket/dev-env && /home/aniket/dev-env/bootstrap-host.sh"]
   - [touch, /var/lib/dev-env.ready]
 
 final_message: "dev-env ready in $UPTIME seconds"

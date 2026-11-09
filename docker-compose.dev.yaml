@@ -1,0 +1,33 @@
+name: dev-env
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: container/Dockerfile
+      args:
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+    image: ghcr.io/coder02aniket/dev-env:latest
+    container_name: dev
+    hostname: dev
+    network_mode: host
+    init: true
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    environment:
+      SSH_ENABLED: ${SSH_ENABLED:-1}
+      SSH_PORT: ${SSH_PORT:-2222}
+    group_add:
+      - "${DOCKER_GID:-999}"
+    volumes:
+      - dev-home:/home/dev
+      - ${WORKSPACE_DIR:-$HOME/projects}:/workspace:z
+      - .:/opt/dev-env:z
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME}/.ssh/authorized_keys:/run/host-authorized-keys:ro,z
+
+volumes:
+  dev-home:
