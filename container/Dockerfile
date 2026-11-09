@@ -108,12 +108,15 @@ RUN install -d /usr/share/keyrings \
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
     && rm -rf /var/lib/apt/lists/*
 
+# The azd tarball stores the binary as `azd-linux-<arch>`, not `azd`.
 RUN ARCH="$(dpkg --print-architecture)" \
-    && curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
+    && retry 4 curl -fsSL \
          "https://github.com/Azure/azure-dev/releases/latest/download/azd-linux-${ARCH}.tar.gz" \
          -o /tmp/azd.tgz \
-    && tar -xzf /tmp/azd.tgz -C /usr/local/bin azd \
-    && rm -f /tmp/azd.tgz
+    && mkdir -p /tmp/azd \
+    && tar -xzf /tmp/azd.tgz -C /tmp/azd \
+    && install -m 0755 "/tmp/azd/azd-linux-${ARCH}" /usr/local/bin/azd \
+    && rm -rf /tmp/azd /tmp/azd.tgz
 
 # --- per-user toolchains ----------------------------------------------------
 COPY versions/mise.toml /tmp/mise.toml
