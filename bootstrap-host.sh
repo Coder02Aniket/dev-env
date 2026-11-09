@@ -113,14 +113,33 @@ fi
 
 log "starting the dev container"
 
-if [[ "${USER_UID}" != "1000" ]]; then
-  # A published image is built for UID 1000; rebuild for other host IDs.
+PULL_OUTPUT=""
+pull_dev() {
+  local out
+  if out="$("${COMPOSE[@]}" pull dev 2>&1)"; then
+    return 0
+  fi
+  PULL_OUTPUT="${out}"
+  return 1
+}
+
+if [[ "${DEV_ENV_FORCE_BUILD:-0}" == "1" ]]; then
+  log "DEV_ENV_FORCE_BUILD=1, building locally"
   "${COMPOSE[@]}" up -d --build
-elif ! "${COMPOSE[@]}" pull dev 2>/dev/null; then
-  log "published image unavailable, building locally (first build takes several minutes)"
+elif [[ "${USER_UID}" != "1000" || "${USER_GID}" != "1000" ]]; then
+  # The published image bakes USER_UID/USER_GID into /etc/passwd so the
+  # container user owns the bind-mounted workspace. Any other ID cannot use it
+  # and needs an image built for this account.
+  log "host account is ${USER_UID}:${USER_GID}; the published image is built for 1000:1000"
+  log "building a local image to match your account (one time per host)"
   "${COMPOSE[@]}" up -d --build
-else
+elif pull_dev; then
+  log "using the published image"
   "${COMPOSE[@]}" up -d
+else
+  log "could not pull the published image; building locally"
+  printf '%s\n' "${PULL_OUTPUT}" | tail -n 6 | sed 's/^/    /'
+  "${COMPOSE[@]}" up -d --build
 fi
 
 log "done"
