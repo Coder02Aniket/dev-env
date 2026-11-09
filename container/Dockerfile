@@ -103,10 +103,12 @@ RUN install -d /usr/share/keyrings \
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ARCH="$(dpkg --print-architecture)"; \
-    curl -fsSL "https://github.com/Azure/azure-dev/releases/latest/download/azd-linux-${ARCH}.tar.gz" -o /tmp/azd.tgz; \
-    tar -xzf /tmp/azd.tgz -C /usr/local/bin azd; \
-    rm -f /tmp/azd.tgz
+RUN ARCH="$(dpkg --print-architecture)" \
+    && curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 \
+         "https://github.com/Azure/azure-dev/releases/latest/download/azd-linux-${ARCH}.tar.gz" \
+         -o /tmp/azd.tgz \
+    && tar -xzf /tmp/azd.tgz -C /usr/local/bin azd \
+    && rm -f /tmp/azd.tgz
 
 # --- per-user toolchains ----------------------------------------------------
 COPY versions/mise.toml /tmp/mise.toml
