@@ -7,8 +7,8 @@ USER_NAME="${USER_NAME:-dev}"
 HOME_DIR="/home/${USER_NAME}"
 
 # Re-apply dotfiles on every start so image updates reach an existing home volume.
-if [[ -d /opt/dotfiles ]] && command -v chezmoi >/dev/null 2>&1; then
-  chezmoi --source /opt/dotfiles apply --force || true
+if [[ -x /usr/local/bin/apply-dotfiles ]]; then
+  /usr/local/bin/apply-dotfiles /opt/dotfiles || true
 fi
 
 if [[ "${SSH_ENABLED:-1}" == "1" ]]; then

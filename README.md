@@ -205,7 +205,7 @@ container/              Dockerfile, entrypoint, in-container verify
 docker-compose.dev.yaml dev container definition
 bootstrap-host.sh       host layer: Docker + start container
 cloud-init/             first-boot trigger (distro-agnostic)
-dotfiles/               chezmoi source, baked into the image
+dotfiles/               shell/tmux/git config, baked into the image
 infra/                  service containers
 versions/mise.toml      Node, Bun, Go pins
 native/                 legacy apt-only installer

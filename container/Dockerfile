@@ -9,6 +9,12 @@ ARG USER_UID=1000
 ARG USER_GID=1000
 ARG MAVEN_VERSION=3.9.9
 
+# bash + pipefail for every RUN, and a retry helper for the GitHub-hosted
+# installers, which occasionally answer with 5xx.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+COPY container/retry.sh /usr/local/bin/retry
+RUN chmod 0755 /usr/local/bin/retry
+
 LABEL org.opencontainers.image.source="https://github.com/Coder02Aniket/dev-env"
 LABEL org.opencontainers.image.description="Portable Ubuntu-based development environment"
 
@@ -62,20 +68,19 @@ RUN curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/b
     && rm -f /tmp/maven.tgz
 
 # --- standalone CLI tools ---------------------------------------------------
-RUN curl -fsSL https://starship.rs/install.sh | sh -s -- -y --bin-dir /usr/local/bin
+RUN retry 4 bash -c 'curl -fsSL https://starship.rs/install.sh -o /tmp/starship.sh && sh /tmp/starship.sh -y --bin-dir /usr/local/bin' \
+    && rm -f /tmp/starship.sh
 
-RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
-
-RUN curl -fsSL https://mise.run | sh \
+RUN retry 4 bash -c 'curl -fsSL https://mise.run -o /tmp/mise.sh && sh /tmp/mise.sh' \
     && MISE_BIN="$(command -v mise || echo /root/.local/bin/mise)" \
     && install -m 0755 "${MISE_BIN}" /usr/local/bin/mise \
-    && rm -rf /root/.local
+    && rm -rf /root/.local /tmp/mise.sh
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+RUN retry 4 bash -c 'curl -LsSf https://astral.sh/uv/install.sh -o /tmp/uv.sh && sh /tmp/uv.sh' \
     && UV_BIN="$(command -v uv || echo /root/.local/bin/uv)" \
     && install -m 0755 "${UV_BIN}" /usr/local/bin/uv \
     && ln -sf /usr/local/bin/uv /usr/local/bin/uvx \
-    && rm -rf /root/.local
+    && rm -rf /root/.local /tmp/uv.sh
 
 # --- Docker CLI only (the daemon stays on the host) -------------------------
 RUN install -d /etc/apt/keyrings \
@@ -124,17 +129,17 @@ RUN sudo -u "${USER_NAME}" -H uv python install 3.12
 RUN sudo -u "${USER_NAME}" -H bash -c \
     'curl --proto =https --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal'
 
-RUN sudo -u "${USER_NAME}" -H bash -c \
-    'curl -fsSL https://opencode.ai/install | bash'
+RUN retry 4 sudo -u "${USER_NAME}" -H bash -c \
+    'curl -fsSL https://opencode.ai/install -o /tmp/opencode.sh && bash /tmp/opencode.sh'
 
 # --- dotfiles ---------------------------------------------------------------
+# Applied with a small script instead of chezmoi, so the image build does not
+# depend on another GitHub release download.
 COPY dotfiles /opt/dotfiles
+COPY container/apply-dotfiles.sh /usr/local/bin/apply-dotfiles
 
-RUN install -d -o "${USER_NAME}" -g "${USER_NAME}" "/home/${USER_NAME}/.config/chezmoi" \
-    && printf '[data]\n  name = "Aniket Shankar Nangare"\n  email = "aniketnangare87@gmail.com"\n' \
-       > "/home/${USER_NAME}/.config/chezmoi/chezmoi.toml" \
-    && chown "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}/.config/chezmoi/chezmoi.toml" \
-    && sudo -u "${USER_NAME}" -H chezmoi --source /opt/dotfiles apply --force
+RUN chmod 0755 /usr/local/bin/apply-dotfiles \
+    && sudo -u "${USER_NAME}" -H /usr/local/bin/apply-dotfiles /opt/dotfiles
 
 # --- sshd (optional, enabled at runtime) ------------------------------------
 RUN mkdir -p /run/sshd \

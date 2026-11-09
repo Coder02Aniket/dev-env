@@ -56,7 +56,6 @@ optional azurite  azurite  --version
 optional opencode opencode --version
 optional gh       gh       --version
 optional starship starship --version
-optional chezmoi  chezmoi  --version
 
 echo
 echo "Services"
